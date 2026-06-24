@@ -33,4 +33,35 @@ class SweepMathTest {
         assertEquals(0, sweepPointCount(sweep))
         assertEquals(emptyList<Double>(), generateSweepFrequencies(sweep))
     }
+
+    @Test
+    fun includesDecimalStepEndpointWithinPrecision() {
+        val sweep = SweepState(startMhz = 100.0, stopMhz = 100.3, stepMhz = 0.1)
+
+        assertEquals(4, sweepPointCount(sweep))
+        assertEquals(listOf(100.0, 100.1, 100.2, 100.3), generateSweepFrequencies(sweep))
+    }
+
+    @Test
+    fun stopsNonDivisibleSpanBeforeExceedingStop() {
+        val sweep = SweepState(startMhz = 100.0, stopMhz = 101.0, stepMhz = 0.3)
+
+        assertEquals(4, sweepPointCount(sweep))
+        assertEquals(listOf(100.0, 100.3, 100.6, 100.9), generateSweepFrequencies(sweep))
+    }
+
+    @Test
+    fun capsExtremelyLargeSweepPointCounts() {
+        val sweep = SweepState(startMhz = 100.0, stopMhz = 200.0, stepMhz = 0.000001)
+
+        assertEquals(MAX_GENERATED_SWEEP_POINTS, sweepPointCount(sweep))
+        assertEquals(MAX_GENERATED_SWEEP_POINTS, generateSweepFrequencies(sweep).size)
+    }
+
+    @Test
+    fun saturatesDurationOverflow() {
+        val sweep = SweepState(startMhz = 100.0, stopMhz = 200.0, stepMhz = 0.000001, dwellMs = Int.MAX_VALUE)
+
+        assertEquals(Int.MAX_VALUE, sweepDurationMs(sweep))
+    }
 }
