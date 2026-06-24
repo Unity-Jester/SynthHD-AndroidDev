@@ -14,8 +14,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -72,6 +75,15 @@ fun ListScreen(
                 Text("Clear")
             }
             Spacer(Modifier.height(12.dp))
+            if (state.hopList.isNotEmpty()) {
+                SelectedHopPointEditor(
+                    points = state.hopList,
+                    onUpdate = onUpdate,
+                    onMove = onMove,
+                    onRemove = onRemove,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             state.hopList.take(20).forEachIndexed { index, point ->
                 Column(
                     modifier = Modifier
@@ -81,42 +93,118 @@ fun ListScreen(
                     Text(
                         text = "${index + 1}. ${point.frequencyMhz} MHz, ${point.powerDbm} dBm, ${point.dwellMs} ms",
                     )
-                    HopPointEditor(
-                        point = point,
-                        frequencyLabel = "Point ${index + 1} Frequency",
-                        powerLabel = "Point ${index + 1} Power",
-                        dwellLabel = "Point ${index + 1} Dwell",
-                        actionLabel = "Update Point ${index + 1}",
-                        onSubmit = { onUpdate(index, it) },
-                    )
-                    Row(Modifier.fillMaxWidth()) {
-                        Button(
-                            onClick = { onMove(index, -1) },
-                            enabled = index > 0,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Move Point ${index + 1} Up")
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = { onMove(index, 1) },
-                            enabled = index < state.hopList.lastIndex,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Move Point ${index + 1} Down")
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { onRemove(index) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Delete Point ${index + 1}")
-                    }
                 }
             }
             if (state.hopList.size > 20) {
                 Spacer(Modifier.height(8.dp))
-                Text("Showing first 20 points")
+                Text("Showing first 20 summaries")
             }
         }
+    }
+}
+
+internal fun coerceHopPointIndex(index: Int, pointCount: Int): Int =
+    if (pointCount <= 0) 0 else index.coerceIn(0, pointCount - 1)
+
+@Composable
+private fun SelectedHopPointEditor(
+    points: List<HopPoint>,
+    onUpdate: (Int, HopPoint) -> Unit,
+    onMove: (Int, Int) -> Unit,
+    onRemove: (Int) -> Unit,
+) {
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    val selectedPointIndex = coerceHopPointIndex(selectedIndex, points.size)
+    val selectedPoint = points[selectedPointIndex]
+
+    Text("Selected point: ${selectedPointIndex + 1} of ${points.size}")
+    PointSelector(
+        selectedIndex = selectedPointIndex,
+        pointCount = points.size,
+        onSelect = { selectedIndex = it },
+    )
+    Spacer(Modifier.height(8.dp))
+    HopPointEditor(
+        point = selectedPoint,
+        frequencyLabel = "Point ${selectedPointIndex + 1} Frequency",
+        powerLabel = "Point ${selectedPointIndex + 1} Power",
+        dwellLabel = "Point ${selectedPointIndex + 1} Dwell",
+        actionLabel = "Update Point ${selectedPointIndex + 1}",
+        onSubmit = { onUpdate(selectedPointIndex, it) },
+    )
+    Row(Modifier.fillMaxWidth()) {
+        Button(
+            onClick = {
+                onMove(selectedPointIndex, -1)
+                selectedIndex = coerceHopPointIndex(selectedPointIndex - 1, points.size)
+            },
+            enabled = selectedPointIndex > 0,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Move Point ${selectedPointIndex + 1} Up")
+        }
+        Spacer(Modifier.width(8.dp))
+        Button(
+            onClick = {
+                onMove(selectedPointIndex, 1)
+                selectedIndex = coerceHopPointIndex(selectedPointIndex + 1, points.size)
+            },
+            enabled = selectedPointIndex < points.lastIndex,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text("Move Point ${selectedPointIndex + 1} Down")
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    Button(
+        onClick = {
+            onRemove(selectedPointIndex)
+            selectedIndex = coerceHopPointIndex(selectedPointIndex, points.size - 1)
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("Delete Point ${selectedPointIndex + 1}")
+    }
+}
+
+@Composable
+private fun PointSelector(
+    selectedIndex: Int,
+    pointCount: Int,
+    onSelect: (Int) -> Unit,
+) {
+    val selectedText = remember(selectedIndex, pointCount) { mutableStateOf((selectedIndex + 1).toString()) }
+    val errorText = remember(selectedIndex, pointCount) { mutableStateOf<String?>(null) }
+
+    OutlinedTextField(
+        value = selectedText.value,
+        onValueChange = {
+            selectedText.value = it
+            errorText.value = null
+        },
+        label = { Text("Selected Point") },
+        suffix = { Text("1-$pointCount") },
+        isError = errorText.value != null,
+        supportingText = { errorText.value?.let { Text(it) } },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(8.dp))
+    Button(
+        onClick = {
+            val selectedPointNumber = selectedText.value.toIntOrNull()
+            errorText.value = when {
+                selectedPointNumber == null -> "Enter a valid whole number"
+                selectedPointNumber !in 1..pointCount -> "Point must be between 1 and $pointCount."
+                else -> null
+            }
+            if (selectedPointNumber != null && errorText.value == null) {
+                onSelect(selectedPointNumber - 1)
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("Select Point")
     }
 }
 

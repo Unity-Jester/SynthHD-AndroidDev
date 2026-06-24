@@ -75,6 +75,7 @@ class SynthHdAppTest {
     @Test
     fun listScreenCanAddEditMoveAndRunPoints() {
         clickTab("List")
+        clickText("Clear")
 
         composeRule.onNodeWithText("New Frequency").performScrollTo().assertIsDisplayed()
         replaceTextField(0, "2450")
@@ -82,17 +83,20 @@ class SynthHdAppTest {
         replaceTextField(2, "25")
         clickText("Add Point")
 
+        composeRule.onNodeWithText("Selected Point").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Point 1 Frequency").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Update Point 1").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Run List").performScrollTo().assertIsDisplayed()
 
-        replaceTextField(3, "2500")
+        replaceTextField(4, "2500")
         clickText("Update Point 1")
 
         composeRule.onNodeWithText("2500.0 MHz", substring = true).performScrollTo().assertIsDisplayed()
 
         replaceTextField(0, "2600")
         clickText("Add Point")
+        replaceTextField(3, "2")
+        clickText("Select Point")
         composeRule.onNodeWithText("Move Point 2 Up").performScrollTo().assertIsDisplayed()
 
         clickText("Run List")
@@ -100,6 +104,32 @@ class SynthHdAppTest {
 
         clickText("Stop List")
         composeRule.onNodeWithText("List state: Idle").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun listScreenCanSelectAndEditPointsAfterFirstTwenty() {
+        clickTab("List")
+        clickText("Clear")
+
+        repeat(21) { index ->
+            replaceTextField(0, "${1_000 + index}")
+            replaceTextField(1, "0")
+            replaceTextField(2, "10")
+            clickText("Add Point")
+        }
+
+        composeRule.onNodeWithText("Showing first 20 summaries").performScrollTo().assertIsDisplayed()
+
+        replaceTextField(3, "21")
+        clickText("Select Point")
+
+        composeRule.onNodeWithText("Point 21 Frequency").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Update Point 21").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Move Point 21 Up").performScrollTo().assertIsDisplayed()
+
+        replaceTextField(4, "3000")
+        clickText("Update Point 21")
+        composeRule.onNodeWithText("Selected point: 21 of 21").performScrollTo().assertIsDisplayed()
     }
 
     private fun clickTab(label: String) {
