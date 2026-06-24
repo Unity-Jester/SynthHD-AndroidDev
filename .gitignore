@@ -1,2 +1,6 @@
 .superpowers/
 .worktrees/
+.gradle/
+.gradle-user/
+build/
+app/build/
