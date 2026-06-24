@@ -8,25 +8,33 @@ const val MAX_GENERATED_SWEEP_POINTS = 100_000
 private const val SWEEP_POINT_EPSILON = 1e-9
 private const val SWEEP_FREQUENCY_ROUNDING_SCALE = 1_000_000_000.0
 
-fun sweepPointCount(sweep: SweepState): Int {
-    if (sweep.stepMhz <= 0.0 || sweep.dwellMs <= 0) return 0
+private fun realSweepPointCount(sweep: SweepState): Long {
+    if (sweep.stepMhz <= 0.0) return 0
     val span = when (sweep.direction) {
         SweepDirection.Up -> sweep.stopMhz - sweep.startMhz
         SweepDirection.Down -> sweep.startMhz - sweep.stopMhz
     }
     if (span < 0.0) return 0
     val intervals = floor(span / sweep.stepMhz + SWEEP_POINT_EPSILON)
-    if (intervals >= MAX_GENERATED_SWEEP_POINTS - 1) return MAX_GENERATED_SWEEP_POINTS
-    return intervals.toInt() + 1
+    if (!intervals.isFinite() || intervals >= Long.MAX_VALUE - 1) return Long.MAX_VALUE
+    return intervals.toLong() + 1
+}
+
+fun sweepPointCount(sweep: SweepState): Int {
+    val realCount = realSweepPointCount(sweep)
+    return if (realCount > Int.MAX_VALUE) Int.MAX_VALUE else realCount.toInt()
 }
 
 fun sweepDurationMs(sweep: SweepState): Int {
-    val durationMs = sweepPointCount(sweep).toLong() * sweep.dwellMs.toLong()
+    if (sweep.dwellMs <= 0) return 0
+    val realCount = realSweepPointCount(sweep)
+    if (realCount > Int.MAX_VALUE / sweep.dwellMs) return Int.MAX_VALUE
+    val durationMs = realCount * sweep.dwellMs.toLong()
     return if (durationMs > Int.MAX_VALUE) Int.MAX_VALUE else durationMs.toInt()
 }
 
 fun generateSweepFrequencies(sweep: SweepState): List<Double> {
-    val count = sweepPointCount(sweep)
+    val count = minOf(sweepPointCount(sweep), MAX_GENERATED_SWEEP_POINTS)
     if (count == 0) return emptyList()
     return List(count) { index ->
         val frequency = when (sweep.direction) {

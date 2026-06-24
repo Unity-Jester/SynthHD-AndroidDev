@@ -51,16 +51,28 @@ class SweepMathTest {
     }
 
     @Test
-    fun capsExtremelyLargeSweepPointCounts() {
+    fun reportsRealPointCountWhileCappingGeneratedFrequencies() {
         val sweep = SweepState(startMhz = 100.0, stopMhz = 200.0, stepMhz = 0.000001)
 
-        assertEquals(MAX_GENERATED_SWEEP_POINTS, sweepPointCount(sweep))
+        assertEquals(100_000_001, sweepPointCount(sweep))
         assertEquals(MAX_GENERATED_SWEEP_POINTS, generateSweepFrequencies(sweep).size)
     }
 
     @Test
+    fun usesRealPointCountForLargeDurationWhenItFitsInInt() {
+        val sweep = SweepState(startMhz = 100.0, stopMhz = 200.0, stepMhz = 0.000001, dwellMs = 10)
+
+        assertEquals(1_000_000_010, sweepDurationMs(sweep))
+    }
+
+    @Test
     fun saturatesDurationOverflow() {
-        val sweep = SweepState(startMhz = 100.0, stopMhz = 200.0, stepMhz = 0.000001, dwellMs = Int.MAX_VALUE)
+        val sweep = SweepState(
+            startMhz = 100.0,
+            stopMhz = 200.0,
+            stepMhz = 0.000001,
+            dwellMs = Int.MAX_VALUE,
+        )
 
         assertEquals(Int.MAX_VALUE, sweepDurationMs(sweep))
     }
