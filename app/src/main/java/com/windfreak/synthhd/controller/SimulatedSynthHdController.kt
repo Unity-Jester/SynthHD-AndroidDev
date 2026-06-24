@@ -12,11 +12,14 @@ import com.windfreak.synthhd.domain.SynthConstants
 import com.windfreak.synthhd.domain.SynthDeviceState
 import com.windfreak.synthhd.domain.TriggerState
 import com.windfreak.synthhd.domain.ValidationResult
+import com.windfreak.synthhd.domain.validateAmDepthPercent
 import com.windfreak.synthhd.domain.validateFrequencyMhz
+import com.windfreak.synthhd.domain.validateFmDeviationKhz
 import com.windfreak.synthhd.domain.validateHopListSize
 import com.windfreak.synthhd.domain.validatePhaseDegrees
 import com.windfreak.synthhd.domain.validatePositiveDwellMs
 import com.windfreak.synthhd.domain.validatePowerDbm
+import com.windfreak.synthhd.domain.validatePulseWidthUs
 
 class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceState()) : SynthHdController {
     override var state: SynthDeviceState = initialState
@@ -88,8 +91,11 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
         state = state.copy(hopList = emptyList())
     }
 
-    override fun setModulation(modulation: ModulationState) {
+    override fun setModulation(modulation: ModulationState): ValidationResult {
+        val result = validateModulation(modulation)
+        if (!result.isValid) return result
         state = state.copy(modulation = modulation)
+        return result
     }
 
     override fun setTrigger(trigger: TriggerState) {
@@ -134,6 +140,7 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
             channelB = sanitizeChannel(state.channelB),
             sweep = if (validateSweep(state.sweep).isValid) state.sweep else defaults.sweep,
             hopList = sanitizeHopList(state.hopList),
+            modulation = if (validateModulation(state.modulation).isValid) state.modulation else defaults.modulation,
         )
     }
 
@@ -169,6 +176,16 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
         if (!sweep.hasValidSpanForDirection()) {
             return ValidationResult(false, "Sweep direction must match start and stop frequencies.")
         }
+        return ValidationResult(true)
+    }
+
+    private fun validateModulation(modulation: ModulationState): ValidationResult {
+        val pulseWidth = validatePulseWidthUs(modulation.pulseWidthUs)
+        if (!pulseWidth.isValid) return pulseWidth
+        val amDepth = validateAmDepthPercent(modulation.amDepthPercent)
+        if (!amDepth.isValid) return amDepth
+        val fmDeviation = validateFmDeviationKhz(modulation.fmDeviationKhz)
+        if (!fmDeviation.isValid) return fmDeviation
         return ValidationResult(true)
     }
 

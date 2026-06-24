@@ -39,7 +39,7 @@ class SynthHdViewModel(
     fun addHopPoint(point: HopPoint) = applyValidation(controller.addHopPoint(point))
     fun removeHopPoint(index: Int) = applyChange { controller.removeHopPoint(index) }
     fun clearHopList() = applyChange { controller.clearHopList() }
-    fun setModulation(modulation: ModulationState) = applyChange { controller.setModulation(modulation) }
+    fun setModulation(modulation: ModulationState) = applyValidation(controller.setModulation(modulation))
     fun setTrigger(trigger: TriggerState) = applyChange { controller.setTrigger(trigger) }
     fun softwareTrigger() = applyChange { controller.softwareTrigger() }
     fun saveToDevice() = applyChange("Simulated settings saved") { controller.saveToDevice() }

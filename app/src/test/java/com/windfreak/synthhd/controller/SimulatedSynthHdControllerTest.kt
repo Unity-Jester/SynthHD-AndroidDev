@@ -3,6 +3,7 @@ package com.windfreak.synthhd.controller
 import com.windfreak.synthhd.domain.ChannelId
 import com.windfreak.synthhd.domain.ChannelState
 import com.windfreak.synthhd.domain.HopPoint
+import com.windfreak.synthhd.domain.ModulationState
 import com.windfreak.synthhd.domain.RunMode
 import com.windfreak.synthhd.domain.SweepDirection
 import com.windfreak.synthhd.domain.SweepState
@@ -76,6 +77,39 @@ class SimulatedSynthHdControllerTest {
     }
 
     @Test
+    fun invalidPulseWidthDoesNotApply() {
+        val controller = SimulatedSynthHdController()
+        val previousModulation = controller.state.modulation
+
+        val result = controller.setModulation(ModulationState(pulseWidthUs = -1.0))
+
+        assertFalse(result.isValid)
+        assertEquals(previousModulation, controller.state.modulation)
+    }
+
+    @Test
+    fun invalidAmDepthDoesNotApply() {
+        val controller = SimulatedSynthHdController()
+        val previousModulation = controller.state.modulation
+
+        val result = controller.setModulation(ModulationState(amDepthPercent = 101.0))
+
+        assertFalse(result.isValid)
+        assertEquals(previousModulation, controller.state.modulation)
+    }
+
+    @Test
+    fun invalidFmDeviationDoesNotApply() {
+        val controller = SimulatedSynthHdController()
+        val previousModulation = controller.state.modulation
+
+        val result = controller.setModulation(ModulationState(fmDeviationKhz = -1.0))
+
+        assertFalse(result.isValid)
+        assertEquals(previousModulation, controller.state.modulation)
+    }
+
+    @Test
     fun upwardSweepRejectsStartAboveStop() {
         val controller = SimulatedSynthHdController()
         val previousSweep = controller.state.sweep
@@ -108,11 +142,13 @@ class SimulatedSynthHdControllerTest {
                 channelA = ChannelState(frequencyMhz = Double.POSITIVE_INFINITY),
                 sweep = SweepState(stepMhz = Double.NaN),
                 hopList = listOf(HopPoint(Double.NaN, 0.0, 10)),
+                modulation = ModulationState(amDepthPercent = 200.0),
             ),
         )
 
         assertEquals(ChannelState(), controller.state.channelA)
         assertEquals(SweepState(), controller.state.sweep)
         assertTrue(controller.state.hopList.isEmpty())
+        assertEquals(ModulationState(), controller.state.modulation)
     }
 }

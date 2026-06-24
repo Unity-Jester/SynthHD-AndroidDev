@@ -26,7 +26,7 @@ interface SynthHdController {
     fun addHopPoint(point: HopPoint): ValidationResult
     fun removeHopPoint(index: Int)
     fun clearHopList()
-    fun setModulation(modulation: ModulationState)
+    fun setModulation(modulation: ModulationState): ValidationResult
     fun setTrigger(trigger: TriggerState)
     fun softwareTrigger()
     fun saveToDevice()

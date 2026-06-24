@@ -30,3 +30,24 @@ fun validateHopListSize(size: Int): ValidationResult =
     } else {
         ValidationResult(false, "List mode supports up to 500 points.")
     }
+
+fun validatePulseWidthUs(value: Double): ValidationResult =
+    if (value.isFinite() && value > 0.0) {
+        ValidationResult(true)
+    } else {
+        ValidationResult(false, "Pulse width must be greater than 0 us.")
+    }
+
+fun validateAmDepthPercent(value: Double): ValidationResult =
+    if (value in 0.0..100.0) {
+        ValidationResult(true)
+    } else {
+        ValidationResult(false, "AM depth must be between 0% and 100%.")
+    }
+
+fun validateFmDeviationKhz(value: Double): ValidationResult =
+    if (value.isFinite() && value >= 0.0) {
+        ValidationResult(true)
+    } else {
+        ValidationResult(false, "FM deviation must be 0 kHz or greater.")
+    }

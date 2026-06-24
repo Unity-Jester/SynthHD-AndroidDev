@@ -34,14 +34,14 @@ fun TriggerScreen(
                 onClick = { onTrigger(trigger.copy(source = TriggerSource.Software)) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Software Source")
+                Text(selectedLabel("Software Source", trigger.source == TriggerSource.Software))
             }
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = { onTrigger(trigger.copy(source = TriggerSource.External)) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("External Source")
+                Text(selectedLabel("External Source", trigger.source == TriggerSource.External))
             }
         }
         Section("Edge") {
@@ -49,14 +49,14 @@ fun TriggerScreen(
                 onClick = { onTrigger(trigger.copy(edge = TriggerEdge.Rising)) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Rising Edge")
+                Text(selectedLabel("Rising Edge", trigger.edge == TriggerEdge.Rising))
             }
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = { onTrigger(trigger.copy(edge = TriggerEdge.Falling)) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Falling Edge")
+                Text(selectedLabel("Falling Edge", trigger.edge == TriggerEdge.Falling))
             }
         }
         Section("Actions") {
@@ -76,3 +76,6 @@ fun TriggerScreen(
         }
     }
 }
+
+private fun selectedLabel(label: String, selected: Boolean): String =
+    if (selected) "$label (selected)" else label

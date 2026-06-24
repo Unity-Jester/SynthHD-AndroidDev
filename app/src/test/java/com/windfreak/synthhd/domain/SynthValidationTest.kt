@@ -27,4 +27,19 @@ class SynthValidationTest {
         assertTrue(validateHopListSize(500).isValid)
         assertEquals("List mode supports up to 500 points.", validateHopListSize(501).message)
     }
+
+    @Test
+    fun acceptsDocumentedModulationRanges() {
+        assertTrue(validatePulseWidthUs(0.1).isValid)
+        assertTrue(validateAmDepthPercent(0.0).isValid)
+        assertTrue(validateAmDepthPercent(100.0).isValid)
+        assertTrue(validateFmDeviationKhz(0.0).isValid)
+    }
+
+    @Test
+    fun rejectsOutOfRangeModulationValues() {
+        assertEquals("Pulse width must be greater than 0 us.", validatePulseWidthUs(0.0).message)
+        assertEquals("AM depth must be between 0% and 100%.", validateAmDepthPercent(100.1).message)
+        assertEquals("FM deviation must be 0 kHz or greater.", validateFmDeviationKhz(-0.1).message)
+    }
 }
