@@ -22,7 +22,7 @@ import com.windfreak.synthhd.domain.validatePowerDbm
 import com.windfreak.synthhd.domain.validatePulseWidthUs
 
 class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceState()) : SynthHdController {
-    override var state: SynthDeviceState = initialState
+    override var state: SynthDeviceState = sanitizeState(initialState)
         private set
 
     override fun replaceState(state: SynthDeviceState) {

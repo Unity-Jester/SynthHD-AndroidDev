@@ -110,6 +110,15 @@ class SimulatedSynthHdControllerTest {
     }
 
     @Test
+    fun constructorSanitizesInvalidInitialModulation() {
+        val controller = SimulatedSynthHdController(
+            SynthDeviceState(modulation = ModulationState(amDepthPercent = 101.0)),
+        )
+
+        assertEquals(ModulationState(), controller.state.modulation)
+    }
+
+    @Test
     fun upwardSweepRejectsStartAboveStop() {
         val controller = SimulatedSynthHdController()
         val previousSweep = controller.state.sweep
