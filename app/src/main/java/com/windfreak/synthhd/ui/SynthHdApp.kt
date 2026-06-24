@@ -23,9 +23,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.windfreak.synthhd.domain.ChannelId
+import com.windfreak.synthhd.ui.screens.ExtrasScreen
 import com.windfreak.synthhd.ui.screens.GeneratorScreen
 import com.windfreak.synthhd.ui.screens.ListScreen
+import com.windfreak.synthhd.ui.screens.ModulationScreen
+import com.windfreak.synthhd.ui.screens.StatusScreen
 import com.windfreak.synthhd.ui.screens.SweepScreen
+import com.windfreak.synthhd.ui.screens.TriggerScreen
 
 private val tabLabels = listOf("Generator", "Sweep", "List", "Mod", "Trigger", "Status", "Extras")
 
@@ -95,11 +99,14 @@ fun SynthHdApp(viewModel: SynthHdViewModel) {
                         onRemove = viewModel::removeHopPoint,
                         onClear = viewModel::clearHopList,
                     )
-                    else -> Text(
-                        text = tabLabels[selectedTab],
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.headlineSmall,
+                    3 -> ModulationScreen(state.modulation, viewModel::setModulation)
+                    4 -> TriggerScreen(
+                        state.trigger,
+                        viewModel::setTrigger,
+                        viewModel::softwareTrigger,
                     )
+                    5 -> StatusScreen(state.status)
+                    6 -> ExtrasScreen(state, viewModel::saveToDevice, viewModel::resetToDefaults)
                 }
             }
         }
