@@ -47,6 +47,7 @@ fun ListScreen(
             Text("List state: ${state.listRunMode}")
             Spacer(Modifier.height(12.dp))
             HopPointEditor(
+                editorKey = "new-${state.hopList.size}",
                 point = HopPoint(1_000.0 + state.hopList.size, 0.0, 10),
                 frequencyLabel = "New Frequency",
                 powerLabel = "New Power",
@@ -125,6 +126,7 @@ private fun SelectedHopPointEditor(
     )
     Spacer(Modifier.height(8.dp))
     HopPointEditor(
+        editorKey = "point-$selectedPointIndex",
         point = selectedPoint,
         frequencyLabel = "Point ${selectedPointIndex + 1} Frequency",
         powerLabel = "Point ${selectedPointIndex + 1} Power",
@@ -210,6 +212,7 @@ private fun PointSelector(
 
 @Composable
 private fun HopPointEditor(
+    editorKey: Any,
     point: HopPoint,
     frequencyLabel: String,
     powerLabel: String,
@@ -217,12 +220,12 @@ private fun HopPointEditor(
     actionLabel: String,
     onSubmit: (HopPoint) -> Unit,
 ) {
-    val frequencyText = remember(point.frequencyMhz) { mutableStateOf(point.frequencyMhz.toString()) }
-    val powerText = remember(point.powerDbm) { mutableStateOf(point.powerDbm.toString()) }
-    val dwellText = remember(point.dwellMs) { mutableStateOf(point.dwellMs.toString()) }
-    val frequencyError = remember(point.frequencyMhz) { mutableStateOf<String?>(null) }
-    val powerError = remember(point.powerDbm) { mutableStateOf<String?>(null) }
-    val dwellError = remember(point.dwellMs) { mutableStateOf<String?>(null) }
+    val frequencyText = remember(editorKey, point.frequencyMhz) { mutableStateOf(point.frequencyMhz.toString()) }
+    val powerText = remember(editorKey, point.powerDbm) { mutableStateOf(point.powerDbm.toString()) }
+    val dwellText = remember(editorKey, point.dwellMs) { mutableStateOf(point.dwellMs.toString()) }
+    val frequencyError = remember(editorKey, point.frequencyMhz) { mutableStateOf<String?>(null) }
+    val powerError = remember(editorKey, point.powerDbm) { mutableStateOf<String?>(null) }
+    val dwellError = remember(editorKey, point.dwellMs) { mutableStateOf<String?>(null) }
 
     OutlinedTextField(
         value = frequencyText.value,

@@ -8,6 +8,7 @@ import com.windfreak.synthhd.domain.RunMode
 import com.windfreak.synthhd.domain.SweepDirection
 import com.windfreak.synthhd.domain.SweepState
 import com.windfreak.synthhd.domain.SynthDeviceState
+import com.windfreak.synthhd.domain.TriggerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -94,14 +95,47 @@ class SimulatedSynthHdControllerTest {
     }
 
     @Test
-    fun startsAndStopsHopListRunState() {
+    fun startsAndStopsRunnableHopListRunState() {
         val controller = SimulatedSynthHdController()
+        controller.addHopPoint(HopPoint(1_000.0, 0.0, 10))
 
         controller.startHopList()
 
         assertEquals(RunMode.Running, controller.state.listRunMode)
 
         controller.stopHopList()
+
+        assertEquals(RunMode.Idle, controller.state.listRunMode)
+    }
+
+    @Test
+    fun emptyHopListDoesNotStartRunState() {
+        val controller = SimulatedSynthHdController()
+
+        controller.startHopList()
+
+        assertEquals(RunMode.Idle, controller.state.listRunMode)
+    }
+
+    @Test
+    fun removingLastHopPointStopsListRunState() {
+        val controller = SimulatedSynthHdController(
+            SynthDeviceState(
+                hopList = listOf(HopPoint(1_000.0, 0.0, 10)),
+                listRunMode = RunMode.Running,
+            ),
+        )
+
+        controller.removeHopPoint(0)
+
+        assertEquals(RunMode.Idle, controller.state.listRunMode)
+    }
+
+    @Test
+    fun sanitizingEmptyHopListStopsListRunState() {
+        val controller = SimulatedSynthHdController(
+            SynthDeviceState(listRunMode = RunMode.Running),
+        )
 
         assertEquals(RunMode.Idle, controller.state.listRunMode)
     }
@@ -115,6 +149,46 @@ class SimulatedSynthHdControllerTest {
 
         assertEquals(RunMode.Complete, controller.state.sweep.runMode)
         assertEquals(RunMode.Complete, controller.state.trigger.mode)
+    }
+
+    @Test
+    fun softwareTriggerDoesNotCompleteIdleSweep() {
+        val controller = SimulatedSynthHdController()
+
+        controller.softwareTrigger()
+
+        assertEquals(RunMode.Idle, controller.state.sweep.runMode)
+        assertEquals(RunMode.Idle, controller.state.trigger.mode)
+    }
+
+    @Test
+    fun startingContinuousSweepClearsArmedTriggerState() {
+        val controller = SimulatedSynthHdController(
+            SynthDeviceState(
+                sweep = SweepState(runMode = RunMode.Armed),
+                trigger = TriggerState(mode = RunMode.Armed),
+            ),
+        )
+
+        controller.startSweep()
+
+        assertEquals(RunMode.Running, controller.state.sweep.runMode)
+        assertEquals(RunMode.Idle, controller.state.trigger.mode)
+    }
+
+    @Test
+    fun stoppingSweepClearsTriggerRunState() {
+        val controller = SimulatedSynthHdController(
+            SynthDeviceState(
+                sweep = SweepState(runMode = RunMode.Armed),
+                trigger = TriggerState(mode = RunMode.Armed),
+            ),
+        )
+
+        controller.stopSweep()
+
+        assertEquals(RunMode.Idle, controller.state.sweep.runMode)
+        assertEquals(RunMode.Idle, controller.state.trigger.mode)
     }
 
     @Test

@@ -132,6 +132,29 @@ class SynthHdAppTest {
         composeRule.onNodeWithText("Selected point: 21 of 21").performScrollTo().assertIsDisplayed()
     }
 
+    @Test
+    fun listEditorResetsUnsavedTextWhenSelectionChanges() {
+        clickTab("List")
+        clickText("Clear")
+
+        replaceTextField(0, "1000")
+        replaceTextField(1, "0")
+        replaceTextField(2, "10")
+        clickText("Add Point")
+
+        replaceTextField(0, "2000")
+        replaceTextField(1, "0")
+        replaceTextField(2, "10")
+        clickText("Add Point")
+
+        replaceTextField(4, "9999")
+        replaceTextField(3, "2")
+        clickText("Select Point")
+        clickText("Update Point 2")
+
+        composeRule.onNodeWithText("2. 2000.0 MHz, 0.0 dBm, 10 ms").performScrollTo().assertIsDisplayed()
+    }
+
     private fun clickTab(label: String) {
         composeRule
             .onNode(hasText(label) and hasClickAction())

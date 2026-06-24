@@ -62,11 +62,17 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     }
 
     override fun startSweep() {
-        state = state.copy(sweep = state.sweep.copy(runMode = RunMode.Running))
+        state = state.copy(
+            sweep = state.sweep.copy(runMode = RunMode.Running),
+            trigger = state.trigger.copy(mode = RunMode.Idle),
+        )
     }
 
     override fun stopSweep() {
-        state = state.copy(sweep = state.sweep.copy(runMode = RunMode.Idle))
+        state = state.copy(
+            sweep = state.sweep.copy(runMode = RunMode.Idle),
+            trigger = state.trigger.copy(mode = RunMode.Idle),
+        )
     }
 
     override fun addHopPoint(point: HopPoint): ValidationResult {
@@ -101,7 +107,11 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
 
     override fun removeHopPoint(index: Int) {
         if (index !in state.hopList.indices) return
-        state = state.copy(hopList = state.hopList.toMutableList().also { it.removeAt(index) })
+        val nextList = state.hopList.toMutableList().also { it.removeAt(index) }
+        state = state.copy(
+            hopList = nextList,
+            listRunMode = if (nextList.isEmpty()) RunMode.Idle else state.listRunMode,
+        )
     }
 
     override fun clearHopList() {
@@ -109,6 +119,7 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     }
 
     override fun startHopList() {
+        if (state.hopList.isEmpty()) return
         state = state.copy(listRunMode = RunMode.Running)
     }
 
@@ -128,6 +139,7 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     }
 
     override fun softwareTrigger() {
+        if (state.sweep.runMode != RunMode.Armed) return
         state = state.copy(
             sweep = state.sweep.copy(runMode = RunMode.Complete),
             trigger = state.trigger.copy(mode = RunMode.Complete),
@@ -160,11 +172,13 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
 
     private fun sanitizeState(state: SynthDeviceState): SynthDeviceState {
         val defaults = SynthDeviceState()
+        val hopList = sanitizeHopList(state.hopList)
         return state.copy(
             channelA = sanitizeChannel(state.channelA),
             channelB = sanitizeChannel(state.channelB),
             sweep = if (validateSweep(state.sweep).isValid) state.sweep else defaults.sweep,
-            hopList = sanitizeHopList(state.hopList),
+            hopList = hopList,
+            listRunMode = if (hopList.isEmpty()) RunMode.Idle else state.listRunMode,
             modulation = if (validateModulation(state.modulation).isValid) state.modulation else defaults.modulation,
         )
     }
