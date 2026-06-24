@@ -1,9 +1,12 @@
 package com.windfreak.synthhd.controller
 
 import com.windfreak.synthhd.domain.ChannelId
+import com.windfreak.synthhd.domain.ChannelState
 import com.windfreak.synthhd.domain.HopPoint
 import com.windfreak.synthhd.domain.RunMode
+import com.windfreak.synthhd.domain.SweepDirection
 import com.windfreak.synthhd.domain.SweepState
+import com.windfreak.synthhd.domain.SynthDeviceState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -59,5 +62,57 @@ class SimulatedSynthHdControllerTest {
 
         assertEquals(RunMode.Complete, controller.state.sweep.runMode)
         assertEquals(RunMode.Complete, controller.state.trigger.mode)
+    }
+
+    @Test
+    fun invalidSweepStepDoesNotApply() {
+        val controller = SimulatedSynthHdController()
+        val previousSweep = controller.state.sweep
+
+        val result = controller.setSweep(SweepState(stepMhz = Double.NaN))
+
+        assertFalse(result.isValid)
+        assertEquals(previousSweep, controller.state.sweep)
+    }
+
+    @Test
+    fun upwardSweepRejectsStartAboveStop() {
+        val controller = SimulatedSynthHdController()
+        val previousSweep = controller.state.sweep
+
+        val result = controller.setSweep(
+            SweepState(startMhz = 200.0, stopMhz = 100.0, direction = SweepDirection.Up),
+        )
+
+        assertFalse(result.isValid)
+        assertEquals(previousSweep, controller.state.sweep)
+    }
+
+    @Test
+    fun downwardSweepRejectsStartBelowStop() {
+        val controller = SimulatedSynthHdController()
+
+        val result = controller.setSweep(
+            SweepState(startMhz = 100.0, stopMhz = 200.0, direction = SweepDirection.Down),
+        )
+
+        assertFalse(result.isValid)
+    }
+
+    @Test
+    fun replaceStateSanitizesInvalidPersistedValues() {
+        val controller = SimulatedSynthHdController()
+
+        controller.replaceState(
+            SynthDeviceState(
+                channelA = ChannelState(frequencyMhz = Double.POSITIVE_INFINITY),
+                sweep = SweepState(stepMhz = Double.NaN),
+                hopList = listOf(HopPoint(Double.NaN, 0.0, 10)),
+            ),
+        )
+
+        assertEquals(ChannelState(), controller.state.channelA)
+        assertEquals(SweepState(), controller.state.sweep)
+        assertTrue(controller.state.hopList.isEmpty())
     }
 }

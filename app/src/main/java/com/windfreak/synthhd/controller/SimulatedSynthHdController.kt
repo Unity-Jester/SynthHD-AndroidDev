@@ -6,7 +6,9 @@ import com.windfreak.synthhd.domain.HopPoint
 import com.windfreak.synthhd.domain.ModulationState
 import com.windfreak.synthhd.domain.ReferenceMode
 import com.windfreak.synthhd.domain.RunMode
+import com.windfreak.synthhd.domain.SweepDirection
 import com.windfreak.synthhd.domain.SweepState
+import com.windfreak.synthhd.domain.SynthConstants
 import com.windfreak.synthhd.domain.SynthDeviceState
 import com.windfreak.synthhd.domain.TriggerState
 import com.windfreak.synthhd.domain.ValidationResult
@@ -21,7 +23,7 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
         private set
 
     override fun replaceState(state: SynthDeviceState) {
-        this.state = state
+        this.state = sanitizeState(state)
     }
 
     override fun selectChannel(channelId: ChannelId) {
@@ -50,15 +52,10 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     }
 
     override fun setSweep(sweep: SweepState): ValidationResult {
-        val start = validateFrequencyMhz(sweep.startMhz)
-        if (!start.isValid) return start
-        val stop = validateFrequencyMhz(sweep.stopMhz)
-        if (!stop.isValid) return stop
-        val dwell = validatePositiveDwellMs(sweep.dwellMs)
-        if (!dwell.isValid) return dwell
-        if (sweep.stepMhz <= 0.0) return ValidationResult(false, "Sweep step must be greater than 0 MHz.")
+        val result = validateSweep(sweep)
+        if (!result.isValid) return result
         state = state.copy(sweep = sweep)
-        return ValidationResult(true)
+        return result
     }
 
     override fun startSweep() {
@@ -129,4 +126,55 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
             ChannelId.B -> state.copy(channelB = update(state.channelB))
         }
     }
+
+    private fun sanitizeState(state: SynthDeviceState): SynthDeviceState {
+        val defaults = SynthDeviceState()
+        return state.copy(
+            channelA = sanitizeChannel(state.channelA),
+            channelB = sanitizeChannel(state.channelB),
+            sweep = if (validateSweep(state.sweep).isValid) state.sweep else defaults.sweep,
+            hopList = sanitizeHopList(state.hopList),
+        )
+    }
+
+    private fun sanitizeChannel(channel: ChannelState): ChannelState =
+        if (isValidChannel(channel)) channel else ChannelState()
+
+    private fun sanitizeHopList(points: List<HopPoint>): List<HopPoint> =
+        points
+            .filter(::isValidHopPoint)
+            .take(SynthConstants.MAX_HOP_POINTS)
+
+    private fun isValidChannel(channel: ChannelState): Boolean =
+        validateFrequencyMhz(channel.frequencyMhz).isValid &&
+            validatePowerDbm(channel.powerDbm).isValid &&
+            validatePhaseDegrees(channel.phaseDegrees).isValid
+
+    private fun isValidHopPoint(point: HopPoint): Boolean =
+        validateFrequencyMhz(point.frequencyMhz).isValid &&
+            validatePowerDbm(point.powerDbm).isValid &&
+            validatePositiveDwellMs(point.dwellMs).isValid
+
+    private fun validateSweep(sweep: SweepState): ValidationResult {
+        if (!sweep.startMhz.isFinite() || !sweep.stopMhz.isFinite() || !sweep.stepMhz.isFinite()) {
+            return ValidationResult(false, "Sweep values must be finite.")
+        }
+        val start = validateFrequencyMhz(sweep.startMhz)
+        if (!start.isValid) return start
+        val stop = validateFrequencyMhz(sweep.stopMhz)
+        if (!stop.isValid) return stop
+        val dwell = validatePositiveDwellMs(sweep.dwellMs)
+        if (!dwell.isValid) return dwell
+        if (sweep.stepMhz <= 0.0) return ValidationResult(false, "Sweep step must be greater than 0 MHz.")
+        if (!sweep.hasValidSpanForDirection()) {
+            return ValidationResult(false, "Sweep direction must match start and stop frequencies.")
+        }
+        return ValidationResult(true)
+    }
+
+    private fun SweepState.hasValidSpanForDirection(): Boolean =
+        when (direction) {
+            SweepDirection.Up -> startMhz <= stopMhz
+            SweepDirection.Down -> startMhz >= stopMhz
+        }
 }
