@@ -23,6 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.windfreak.synthhd.domain.ChannelId
+import com.windfreak.synthhd.ui.screens.GeneratorScreen
+import com.windfreak.synthhd.ui.screens.ListScreen
+import com.windfreak.synthhd.ui.screens.SweepScreen
 
 private val tabLabels = listOf("Generator", "Sweep", "List", "Mod", "Trigger", "Status", "Extras")
 
@@ -70,11 +73,34 @@ fun SynthHdApp(viewModel: SynthHdViewModel) {
                         )
                     }
                 }
-                Text(
-                    text = tabLabels[selectedTab],
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
+                when (selectedTab) {
+                    0 -> GeneratorScreen(
+                        state = state,
+                        onFrequency = viewModel::setFrequencyMhz,
+                        onPower = viewModel::setPowerDbm,
+                        onPhase = viewModel::setPhaseDegrees,
+                        onRf = viewModel::setRfEnabled,
+                        onLock = viewModel::setChannelLocked,
+                        onReference = viewModel::setReferenceMode,
+                    )
+                    1 -> SweepScreen(
+                        sweep = state.sweep,
+                        onSweep = viewModel::setSweep,
+                        onStart = viewModel::startSweep,
+                        onStop = viewModel::stopSweep,
+                    )
+                    2 -> ListScreen(
+                        state = state,
+                        onAdd = viewModel::addHopPoint,
+                        onRemove = viewModel::removeHopPoint,
+                        onClear = viewModel::clearHopList,
+                    )
+                    else -> Text(
+                        text = tabLabels[selectedTab],
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                }
             }
         }
     }
