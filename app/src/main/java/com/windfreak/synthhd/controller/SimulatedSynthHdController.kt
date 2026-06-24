@@ -135,7 +135,14 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     }
 
     override fun setTrigger(trigger: TriggerState) {
-        state = state.copy(trigger = trigger)
+        state = state.copy(
+            trigger = trigger,
+            sweep = if (trigger.mode == RunMode.Armed) {
+                state.sweep.copy(runMode = RunMode.Armed)
+            } else {
+                state.sweep
+            },
+        )
     }
 
     override fun softwareTrigger() {

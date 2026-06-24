@@ -192,6 +192,16 @@ class SimulatedSynthHdControllerTest {
     }
 
     @Test
+    fun armingTriggerAlsoArmsSweep() {
+        val controller = SimulatedSynthHdController()
+
+        controller.setTrigger(TriggerState(mode = RunMode.Armed))
+
+        assertEquals(RunMode.Armed, controller.state.trigger.mode)
+        assertEquals(RunMode.Armed, controller.state.sweep.runMode)
+    }
+
+    @Test
     fun invalidSweepStepDoesNotApply() {
         val controller = SimulatedSynthHdController()
         val previousSweep = controller.state.sweep
