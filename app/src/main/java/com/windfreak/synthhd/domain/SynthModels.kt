@@ -87,7 +87,7 @@ fun SynthDeviceState.toJson(): JSONObject = JSONObject()
     .put("savedSnapshot", savedSnapshot?.name ?: "")
 
 fun synthDeviceStateFromJson(json: JSONObject): SynthDeviceState = SynthDeviceState(
-    activeChannel = ChannelId.valueOf(json.optString("activeChannel", ChannelId.A.name)),
+    activeChannel = json.optEnum("activeChannel", ChannelId.A),
     channelA = channelStateFromJson(json.optJSONObject("channelA") ?: JSONObject()),
     channelB = channelStateFromJson(json.optJSONObject("channelB") ?: JSONObject()),
     sweep = sweepStateFromJson(json.optJSONObject("sweep") ?: JSONObject()),
@@ -95,8 +95,26 @@ fun synthDeviceStateFromJson(json: JSONObject): SynthDeviceState = SynthDeviceSt
     modulation = modulationStateFromJson(json.optJSONObject("modulation") ?: JSONObject()),
     trigger = triggerStateFromJson(json.optJSONObject("trigger") ?: JSONObject()),
     status = deviceStatusFromJson(json.optJSONObject("status") ?: JSONObject()),
-    savedSnapshot = json.optString("savedSnapshot").takeIf { it.isNotBlank() }?.let(ChannelId::valueOf),
+    savedSnapshot = json.optNullableEnum<ChannelId>("savedSnapshot"),
 )
+
+private inline fun <reified T : Enum<T>> JSONObject.optEnum(name: String, default: T): T =
+    enumValues<T>().firstOrNull { it.name == optString(name, default.name) } ?: default
+
+private inline fun <reified T : Enum<T>> JSONObject.optNullableEnum(name: String): T? {
+    val value = optString(name).takeIf { it.isNotBlank() } ?: return null
+    return enumValues<T>().firstOrNull { it.name == value }
+}
+
+private fun JSONObject.optFiniteDouble(name: String, default: Double): Double {
+    val value = optDouble(name, default)
+    return if (value.isFinite()) value else default
+}
+
+private fun JSONObject.optPositiveInt(name: String, default: Int): Int {
+    val value = optInt(name, default)
+    return if (value > 0) value else default
+}
 
 private fun ChannelState.toJson(): JSONObject = JSONObject()
     .put("frequencyMhz", frequencyMhz)
@@ -106,9 +124,9 @@ private fun ChannelState.toJson(): JSONObject = JSONObject()
     .put("locked", locked)
 
 private fun channelStateFromJson(json: JSONObject): ChannelState = ChannelState(
-    frequencyMhz = json.optDouble("frequencyMhz", 1_000.0),
-    powerDbm = json.optDouble("powerDbm", 0.0),
-    phaseDegrees = json.optDouble("phaseDegrees", 0.0),
+    frequencyMhz = json.optFiniteDouble("frequencyMhz", 1_000.0),
+    powerDbm = json.optFiniteDouble("powerDbm", 0.0),
+    phaseDegrees = json.optFiniteDouble("phaseDegrees", 0.0),
     rfEnabled = json.optBoolean("rfEnabled", false),
     locked = json.optBoolean("locked", false),
 )
@@ -122,12 +140,12 @@ private fun SweepState.toJson(): JSONObject = JSONObject()
     .put("runMode", runMode.name)
 
 private fun sweepStateFromJson(json: JSONObject): SweepState = SweepState(
-    startMhz = json.optDouble("startMhz", 1_000.0),
-    stopMhz = json.optDouble("stopMhz", 2_000.0),
-    stepMhz = json.optDouble("stepMhz", 10.0),
-    dwellMs = json.optInt("dwellMs", 10),
-    direction = SweepDirection.valueOf(json.optString("direction", SweepDirection.Up.name)),
-    runMode = RunMode.valueOf(json.optString("runMode", RunMode.Idle.name)),
+    startMhz = json.optFiniteDouble("startMhz", 1_000.0),
+    stopMhz = json.optFiniteDouble("stopMhz", 2_000.0),
+    stepMhz = json.optFiniteDouble("stepMhz", 10.0),
+    dwellMs = json.optPositiveInt("dwellMs", 10),
+    direction = json.optEnum("direction", SweepDirection.Up),
+    runMode = json.optEnum("runMode", RunMode.Idle),
 )
 
 private fun HopPoint.toJson(): JSONObject = JSONObject()
@@ -136,9 +154,9 @@ private fun HopPoint.toJson(): JSONObject = JSONObject()
     .put("dwellMs", dwellMs)
 
 private fun hopPointFromJson(json: JSONObject): HopPoint = HopPoint(
-    frequencyMhz = json.optDouble("frequencyMhz", 1_000.0),
-    powerDbm = json.optDouble("powerDbm", 0.0),
-    dwellMs = json.optInt("dwellMs", 10),
+    frequencyMhz = json.optFiniteDouble("frequencyMhz", 1_000.0),
+    powerDbm = json.optFiniteDouble("powerDbm", 0.0),
+    dwellMs = json.optPositiveInt("dwellMs", 10),
 )
 
 private fun hopListFromJson(array: JSONArray): List<HopPoint> =
@@ -158,9 +176,9 @@ private fun modulationStateFromJson(json: JSONObject): ModulationState = Modulat
     amEnabled = json.optBoolean("amEnabled", false),
     fmEnabled = json.optBoolean("fmEnabled", false),
     chirpEnabled = json.optBoolean("chirpEnabled", false),
-    pulseWidthUs = json.optDouble("pulseWidthUs", 10.0),
-    amDepthPercent = json.optDouble("amDepthPercent", 50.0),
-    fmDeviationKhz = json.optDouble("fmDeviationKhz", 100.0),
+    pulseWidthUs = json.optFiniteDouble("pulseWidthUs", 10.0),
+    amDepthPercent = json.optFiniteDouble("amDepthPercent", 50.0),
+    fmDeviationKhz = json.optFiniteDouble("fmDeviationKhz", 100.0),
 )
 
 private fun TriggerState.toJson(): JSONObject = JSONObject()
@@ -169,9 +187,9 @@ private fun TriggerState.toJson(): JSONObject = JSONObject()
     .put("mode", mode.name)
 
 private fun triggerStateFromJson(json: JSONObject): TriggerState = TriggerState(
-    source = TriggerSource.valueOf(json.optString("source", TriggerSource.Software.name)),
-    edge = TriggerEdge.valueOf(json.optString("edge", TriggerEdge.Rising.name)),
-    mode = RunMode.valueOf(json.optString("mode", RunMode.Idle.name)),
+    source = json.optEnum("source", TriggerSource.Software),
+    edge = json.optEnum("edge", TriggerEdge.Rising),
+    mode = json.optEnum("mode", RunMode.Idle),
 )
 
 private fun DeviceStatus.toJson(): JSONObject = JSONObject()
@@ -191,8 +209,8 @@ private fun deviceStatusFromJson(json: JSONObject): DeviceStatus = DeviceStatus(
     serial = json.optString("serial", "SIM-0001"),
     firmware = json.optString("firmware", "sim-0.1"),
     calibrationDate = json.optString("calibrationDate", "Simulated"),
-    temperatureC = json.optDouble("temperatureC", 40.0),
-    referenceMode = ReferenceMode.valueOf(json.optString("referenceMode", ReferenceMode.Internal.name)),
+    temperatureC = json.optFiniteDouble("temperatureC", 40.0),
+    referenceMode = json.optEnum("referenceMode", ReferenceMode.Internal),
     lockDetect = json.optBoolean("lockDetect", true),
     levelOk = json.optBoolean("levelOk", true),
 )
