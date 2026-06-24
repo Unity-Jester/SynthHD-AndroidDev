@@ -72,14 +72,31 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     override fun addHopPoint(point: HopPoint): ValidationResult {
         val size = validateHopListSize(state.hopList.size + 1)
         if (!size.isValid) return size
-        val frequency = validateFrequencyMhz(point.frequencyMhz)
-        if (!frequency.isValid) return frequency
-        val power = validatePowerDbm(point.powerDbm)
-        if (!power.isValid) return power
-        val dwell = validatePositiveDwellMs(point.dwellMs)
-        if (!dwell.isValid) return dwell
+        val pointResult = validateHopPointValues(point)
+        if (!pointResult.isValid) return pointResult
         state = state.copy(hopList = state.hopList + point)
         return ValidationResult(true)
+    }
+
+    override fun updateHopPoint(index: Int, point: HopPoint): ValidationResult {
+        if (index !in state.hopList.indices) return ValidationResult(false, "List point does not exist.")
+        val pointResult = validateHopPointValues(point)
+        if (!pointResult.isValid) return pointResult
+        state = state.copy(
+            hopList = state.hopList.toMutableList().also { it[index] = point },
+        )
+        return ValidationResult(true)
+    }
+
+    override fun moveHopPoint(index: Int, offset: Int) {
+        val nextIndex = index + offset
+        if (index !in state.hopList.indices || nextIndex !in state.hopList.indices) return
+        state = state.copy(
+            hopList = state.hopList.toMutableList().also {
+                val point = it.removeAt(index)
+                it.add(nextIndex, point)
+            },
+        )
     }
 
     override fun removeHopPoint(index: Int) {
@@ -88,7 +105,15 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     }
 
     override fun clearHopList() {
-        state = state.copy(hopList = emptyList())
+        state = state.copy(hopList = emptyList(), listRunMode = RunMode.Idle)
+    }
+
+    override fun startHopList() {
+        state = state.copy(listRunMode = RunMode.Running)
+    }
+
+    override fun stopHopList() {
+        state = state.copy(listRunMode = RunMode.Idle)
     }
 
     override fun setModulation(modulation: ModulationState): ValidationResult {
@@ -158,9 +183,17 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
             validatePhaseDegrees(channel.phaseDegrees).isValid
 
     private fun isValidHopPoint(point: HopPoint): Boolean =
-        validateFrequencyMhz(point.frequencyMhz).isValid &&
-            validatePowerDbm(point.powerDbm).isValid &&
-            validatePositiveDwellMs(point.dwellMs).isValid
+        validateHopPointValues(point).isValid
+
+    private fun validateHopPointValues(point: HopPoint): ValidationResult {
+        val frequency = validateFrequencyMhz(point.frequencyMhz)
+        if (!frequency.isValid) return frequency
+        val power = validatePowerDbm(point.powerDbm)
+        if (!power.isValid) return power
+        val dwell = validatePositiveDwellMs(point.dwellMs)
+        if (!dwell.isValid) return dwell
+        return ValidationResult(true)
+    }
 
     private fun validateSweep(sweep: SweepState): ValidationResult {
         if (!sweep.startMhz.isFinite() || !sweep.stopMhz.isFinite() || !sweep.stepMhz.isFinite()) {

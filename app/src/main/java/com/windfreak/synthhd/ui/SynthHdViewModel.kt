@@ -10,6 +10,7 @@ import com.windfreak.synthhd.domain.ChannelId
 import com.windfreak.synthhd.domain.HopPoint
 import com.windfreak.synthhd.domain.ModulationState
 import com.windfreak.synthhd.domain.ReferenceMode
+import com.windfreak.synthhd.domain.RunMode
 import com.windfreak.synthhd.domain.SweepState
 import com.windfreak.synthhd.domain.SynthDeviceState
 import com.windfreak.synthhd.domain.TriggerState
@@ -36,9 +37,21 @@ class SynthHdViewModel(
     fun setSweep(sweep: SweepState) = applyValidation(controller.setSweep(sweep))
     fun startSweep() = applyChange { controller.startSweep() }
     fun stopSweep() = applyChange { controller.stopSweep() }
+    fun armTriggeredSweep() {
+        val result = controller.setSweep(controller.state.sweep.copy(runMode = RunMode.Armed))
+        if (!result.isValid) {
+            applyValidation(result)
+            return
+        }
+        applyChange { controller.setTrigger(controller.state.trigger.copy(mode = RunMode.Armed)) }
+    }
     fun addHopPoint(point: HopPoint) = applyValidation(controller.addHopPoint(point))
+    fun updateHopPoint(index: Int, point: HopPoint) = applyValidation(controller.updateHopPoint(index, point))
+    fun moveHopPoint(index: Int, offset: Int) = applyChange { controller.moveHopPoint(index, offset) }
     fun removeHopPoint(index: Int) = applyChange { controller.removeHopPoint(index) }
     fun clearHopList() = applyChange { controller.clearHopList() }
+    fun startHopList() = applyChange { controller.startHopList() }
+    fun stopHopList() = applyChange { controller.stopHopList() }
     fun setModulation(modulation: ModulationState) = applyValidation(controller.setModulation(modulation))
     fun setTrigger(trigger: TriggerState) = applyChange { controller.setTrigger(trigger) }
     fun softwareTrigger() = applyChange { controller.softwareTrigger() }

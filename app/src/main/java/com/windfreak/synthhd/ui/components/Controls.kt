@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.windfreak.synthhd.domain.ValidationResult
 
 @Composable
 fun Section(title: String, content: @Composable () -> Unit) {
@@ -41,23 +42,24 @@ fun NumberField(
     label: String,
     value: Double,
     suffix: String,
+    validator: ((Double) -> ValidationResult)? = null,
     onApply: (Double) -> Unit,
 ) {
     val text = remember(value) { mutableStateOf(value.toString()) }
-    val hasError = remember(value) { mutableStateOf(false) }
+    val errorMessage = remember(value) { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = text.value,
             onValueChange = {
                 text.value = it
-                hasError.value = false
+                errorMessage.value = null
             },
             label = { Text(label) },
             suffix = { Text(suffix) },
-            isError = hasError.value,
+            isError = errorMessage.value != null,
             supportingText = {
-                if (hasError.value) {
-                    Text("Enter a valid number")
+                errorMessage.value?.let {
+                    Text(it)
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -67,15 +69,20 @@ fun NumberField(
         Button(
             onClick = {
                 text.value.toDoubleOrNull()?.let {
-                    hasError.value = false
-                    onApply(it)
+                    val result = validator?.invoke(it) ?: ValidationResult(true)
+                    if (result.isValid) {
+                        errorMessage.value = null
+                        onApply(it)
+                    } else {
+                        errorMessage.value = result.message
+                    }
                 } ?: run {
-                    hasError.value = true
+                    errorMessage.value = "Enter a valid number"
                 }
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Apply")
+            Text("Apply $label")
         }
     }
 }
@@ -85,23 +92,24 @@ fun IntField(
     label: String,
     value: Int,
     suffix: String,
+    validator: ((Int) -> ValidationResult)? = null,
     onApply: (Int) -> Unit,
 ) {
     val text = remember(value) { mutableStateOf(value.toString()) }
-    val hasError = remember(value) { mutableStateOf(false) }
+    val errorMessage = remember(value) { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = text.value,
             onValueChange = {
                 text.value = it
-                hasError.value = false
+                errorMessage.value = null
             },
             label = { Text(label) },
             suffix = { Text(suffix) },
-            isError = hasError.value,
+            isError = errorMessage.value != null,
             supportingText = {
-                if (hasError.value) {
-                    Text("Enter a valid whole number")
+                errorMessage.value?.let {
+                    Text(it)
                 }
             },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -111,15 +119,20 @@ fun IntField(
         Button(
             onClick = {
                 text.value.toIntOrNull()?.let {
-                    hasError.value = false
-                    onApply(it)
+                    val result = validator?.invoke(it) ?: ValidationResult(true)
+                    if (result.isValid) {
+                        errorMessage.value = null
+                        onApply(it)
+                    } else {
+                        errorMessage.value = result.message
+                    }
                 } ?: run {
-                    hasError.value = true
+                    errorMessage.value = "Enter a valid whole number"
                 }
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Apply")
+            Text("Apply $label")
         }
     }
 }

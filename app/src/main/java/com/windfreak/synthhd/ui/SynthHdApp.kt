@@ -91,13 +91,18 @@ fun SynthHdApp(viewModel: SynthHdViewModel) {
                         sweep = state.sweep,
                         onSweep = viewModel::setSweep,
                         onStart = viewModel::startSweep,
+                        onArmTriggered = viewModel::armTriggeredSweep,
                         onStop = viewModel::stopSweep,
                     )
                     2 -> ListScreen(
                         state = state,
                         onAdd = viewModel::addHopPoint,
+                        onUpdate = viewModel::updateHopPoint,
+                        onMove = viewModel::moveHopPoint,
                         onRemove = viewModel::removeHopPoint,
                         onClear = viewModel::clearHopList,
+                        onStart = viewModel::startHopList,
+                        onStop = viewModel::stopHopList,
                     )
                     3 -> ModulationScreen(state.modulation, viewModel::setModulation)
                     4 -> TriggerScreen(

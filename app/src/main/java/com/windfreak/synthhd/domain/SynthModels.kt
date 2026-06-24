@@ -69,6 +69,7 @@ data class SynthDeviceState(
     val channelB: ChannelState = ChannelState(),
     val sweep: SweepState = SweepState(),
     val hopList: List<HopPoint> = emptyList(),
+    val listRunMode: RunMode = RunMode.Idle,
     val modulation: ModulationState = ModulationState(),
     val trigger: TriggerState = TriggerState(),
     val status: DeviceStatus = DeviceStatus(),
@@ -81,6 +82,7 @@ fun SynthDeviceState.toJson(): JSONObject = JSONObject()
     .put("channelB", channelB.toJson())
     .put("sweep", sweep.toJson())
     .put("hopList", JSONArray().also { array -> hopList.forEach { array.put(it.toJson()) } })
+    .put("listRunMode", listRunMode.name)
     .put("modulation", modulation.toJson())
     .put("trigger", trigger.toJson())
     .put("status", status.toJson())
@@ -92,6 +94,7 @@ fun synthDeviceStateFromJson(json: JSONObject): SynthDeviceState = SynthDeviceSt
     channelB = channelStateFromJson(json.optJSONObject("channelB") ?: JSONObject()),
     sweep = sweepStateFromJson(json.optJSONObject("sweep") ?: JSONObject()),
     hopList = hopListFromJson(json.optJSONArray("hopList") ?: JSONArray()),
+    listRunMode = json.optEnum("listRunMode", RunMode.Idle),
     modulation = modulationStateFromJson(json.optJSONObject("modulation") ?: JSONObject()),
     trigger = triggerStateFromJson(json.optJSONObject("trigger") ?: JSONObject()),
     status = deviceStatusFromJson(json.optJSONObject("status") ?: JSONObject()),

@@ -55,6 +55,58 @@ class SimulatedSynthHdControllerTest {
     }
 
     @Test
+    fun editsExistingHopPointWithValidation() {
+        val controller = SimulatedSynthHdController()
+        controller.addHopPoint(HopPoint(1_000.0, 0.0, 10))
+
+        val result = controller.updateHopPoint(0, HopPoint(2_450.0, -3.0, 25))
+
+        assertTrue(result.isValid)
+        assertEquals(HopPoint(2_450.0, -3.0, 25), controller.state.hopList.single())
+    }
+
+    @Test
+    fun invalidHopPointEditDoesNotApply() {
+        val controller = SimulatedSynthHdController()
+        controller.addHopPoint(HopPoint(1_000.0, 0.0, 10))
+
+        val result = controller.updateHopPoint(0, HopPoint(1.0, -3.0, 25))
+
+        assertFalse(result.isValid)
+        assertEquals(HopPoint(1_000.0, 0.0, 10), controller.state.hopList.single())
+    }
+
+    @Test
+    fun movesHopPointsUpAndDown() {
+        val controller = SimulatedSynthHdController()
+        val first = HopPoint(1_000.0, 0.0, 10)
+        val second = HopPoint(2_000.0, -3.0, 20)
+        controller.addHopPoint(first)
+        controller.addHopPoint(second)
+
+        controller.moveHopPoint(1, -1)
+
+        assertEquals(listOf(second, first), controller.state.hopList)
+
+        controller.moveHopPoint(0, 1)
+
+        assertEquals(listOf(first, second), controller.state.hopList)
+    }
+
+    @Test
+    fun startsAndStopsHopListRunState() {
+        val controller = SimulatedSynthHdController()
+
+        controller.startHopList()
+
+        assertEquals(RunMode.Running, controller.state.listRunMode)
+
+        controller.stopHopList()
+
+        assertEquals(RunMode.Idle, controller.state.listRunMode)
+    }
+
+    @Test
     fun softwareTriggerRunsAndCompletesArmedSweep() {
         val controller = SimulatedSynthHdController()
 

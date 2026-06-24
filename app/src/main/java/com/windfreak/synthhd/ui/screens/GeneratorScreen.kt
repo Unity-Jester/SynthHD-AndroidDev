@@ -15,6 +15,9 @@ import com.windfreak.synthhd.domain.ChannelId
 import com.windfreak.synthhd.domain.ReferenceMode
 import com.windfreak.synthhd.domain.SynthConstants
 import com.windfreak.synthhd.domain.SynthDeviceState
+import com.windfreak.synthhd.domain.validateFrequencyMhz
+import com.windfreak.synthhd.domain.validatePhaseDegrees
+import com.windfreak.synthhd.domain.validatePowerDbm
 import com.windfreak.synthhd.ui.components.NumberField
 import com.windfreak.synthhd.ui.components.Section
 import com.windfreak.synthhd.ui.components.ToggleRow
@@ -36,11 +39,11 @@ fun GeneratorScreen(
 
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Section("Generator ${state.activeChannel}") {
-            NumberField("Frequency", channel.frequencyMhz, "MHz", onFrequency)
+            NumberField("Frequency", channel.frequencyMhz, "MHz", validator = ::validateFrequencyMhz, onApply = onFrequency)
             Spacer(Modifier.height(12.dp))
-            NumberField("Power", channel.powerDbm, "dBm", onPower)
+            NumberField("Power", channel.powerDbm, "dBm", validator = ::validatePowerDbm, onApply = onPower)
             Spacer(Modifier.height(12.dp))
-            NumberField("Phase", channel.phaseDegrees, "deg", onPhase)
+            NumberField("Phase", channel.phaseDegrees, "deg", validator = ::validatePhaseDegrees, onApply = onPhase)
             Spacer(Modifier.height(12.dp))
             ToggleRow("RF Output", channel.rfEnabled, onRf)
             ToggleRow("Channel Lock", channel.locked, onLock)

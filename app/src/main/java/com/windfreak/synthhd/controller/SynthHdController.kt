@@ -24,8 +24,12 @@ interface SynthHdController {
     fun startSweep()
     fun stopSweep()
     fun addHopPoint(point: HopPoint): ValidationResult
+    fun updateHopPoint(index: Int, point: HopPoint): ValidationResult
+    fun moveHopPoint(index: Int, offset: Int)
     fun removeHopPoint(index: Int)
     fun clearHopList()
+    fun startHopList()
+    fun stopHopList()
     fun setModulation(modulation: ModulationState): ValidationResult
     fun setTrigger(trigger: TriggerState)
     fun softwareTrigger()
