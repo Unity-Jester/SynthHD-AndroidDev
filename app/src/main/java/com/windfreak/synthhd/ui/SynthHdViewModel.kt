@@ -4,9 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.windfreak.synthhd.controller.HardwareConnectResult
+import com.windfreak.synthhd.controller.HardwareControllerFactory
+import com.windfreak.synthhd.controller.HardwareDevice
 import com.windfreak.synthhd.controller.SimulatedSynthHdController
 import com.windfreak.synthhd.controller.SynthHdController
+import com.windfreak.synthhd.controller.WindfreakSynthHdController
 import com.windfreak.synthhd.domain.ChannelId
+import com.windfreak.synthhd.domain.DeviceStatus
 import com.windfreak.synthhd.domain.HopPoint
 import com.windfreak.synthhd.domain.ModulationState
 import com.windfreak.synthhd.domain.ReferenceMode
@@ -19,13 +24,22 @@ import com.windfreak.synthhd.persistence.SynthStateStore
 
 class SynthHdViewModel(
     private val store: SynthStateStore,
-    private val controller: SynthHdController = SimulatedSynthHdController(store.load()),
+    initialController: SynthHdController = SimulatedSynthHdController(store.load()),
+    private val hardwareFactory: HardwareControllerFactory? = null,
 ) : ViewModel() {
+    private var controller: SynthHdController = initialController
+
     var state by mutableStateOf(controller.state)
         private set
 
     var message by mutableStateOf("Offline simulator ready")
         private set
+
+    var hardwareDevices by mutableStateOf<List<HardwareDevice>>(emptyList())
+        private set
+
+    val isHardwareConnected: Boolean
+        get() = controller is WindfreakSynthHdController
 
     fun selectChannel(channelId: ChannelId) = applyChange { controller.selectChannel(channelId) }
     fun setFrequencyMhz(value: Double) = applyValidation(controller.setFrequencyMhz(value))
@@ -55,10 +69,58 @@ class SynthHdViewModel(
     fun setModulation(modulation: ModulationState) = applyValidation(controller.setModulation(modulation))
     fun setTrigger(trigger: TriggerState) = applyChange { controller.setTrigger(trigger) }
     fun softwareTrigger() = applyChange { controller.softwareTrigger() }
-    fun saveToDevice() = applyChange("Simulated settings saved") { controller.saveToDevice() }
+    fun saveToDevice() = applyChange(if (isHardwareConnected) "Hardware settings saved" else "Simulated settings saved") {
+        controller.saveToDevice()
+    }
     fun resetToDefaults() = applyChange("Simulator reset") { controller.resetToDefaults() }
 
     fun replaceState(newState: SynthDeviceState) = applyChange { controller.replaceState(newState) }
+
+    fun scanUsbDevices() {
+        val factory = hardwareFactory
+        if (factory == null) {
+            message = "USB hardware control is not available in this build."
+            return
+        }
+        hardwareDevices = factory.scan()
+        message = if (hardwareDevices.isEmpty()) {
+            "No USB serial devices found"
+        } else {
+            "Found ${hardwareDevices.size} USB serial device(s)"
+        }
+    }
+
+    fun connectUsbDevice() {
+        val factory = hardwareFactory
+        if (factory == null) {
+            message = "USB hardware control is not available in this build."
+            return
+        }
+        when (val result = factory.connectFirst(state)) {
+            is HardwareConnectResult.Connected -> {
+                closeHardwareController()
+                controller = result.controller
+                sync("USB hardware connected")
+            }
+            is HardwareConnectResult.PermissionRequested -> {
+                message = "USB permission requested for ${result.deviceLabel}. Approve it, then tap Connect again."
+            }
+            is HardwareConnectResult.Failed -> {
+                message = result.message
+            }
+        }
+    }
+
+    fun disconnectHardware() {
+        closeHardwareController()
+        controller = SimulatedSynthHdController(state.copy(status = DeviceStatus()))
+        sync("Returned to offline simulator")
+    }
+
+    override fun onCleared() {
+        closeHardwareController()
+        super.onCleared()
+    }
 
     private fun applyValidation(result: ValidationResult) {
         if (result.isValid) {
@@ -77,5 +139,9 @@ class SynthHdViewModel(
         state = controller.state
         store.save(state)
         message = nextMessage
+    }
+
+    private fun closeHardwareController() {
+        (controller as? WindfreakSynthHdController)?.close()
     }
 }

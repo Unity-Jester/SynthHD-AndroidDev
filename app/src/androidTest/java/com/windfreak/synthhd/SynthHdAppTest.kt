@@ -1,6 +1,8 @@
 package com.windfreak.synthhd
 
+import android.view.WindowInsets.Type
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -9,6 +11,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -21,6 +25,32 @@ class SynthHdAppTest {
         composeRule.onNodeWithText("SynthHD Pro Simulator").assertIsDisplayed()
         composeRule.onNodeWithText("Offline simulator").assertIsDisplayed()
         composeRule.onNodeWithText("Generator").assertIsDisplayed()
+    }
+
+    @Test
+    fun headerClearsSystemStatusBar() {
+        val titleTop = composeRule
+            .onNodeWithText("SynthHD Pro Simulator")
+            .getUnclippedBoundsInRoot()
+            .top
+        val rootInsets = composeRule.activity.window.decorView.rootWindowInsets
+        val safeTopPx = maxOf(
+            rootInsets.getInsets(Type.statusBars()).top,
+            rootInsets.displayCutout?.safeInsetTop ?: 0,
+        )
+        val safeTop = with(composeRule.density) { safeTopPx.toDp() }
+
+        assertTrue("Expected title to clear the top safe area", titleTop >= safeTop)
+    }
+
+    @Test
+    fun hidesAndroidStatusBarForDemo() {
+        composeRule.waitForIdle()
+
+        assertFalse(
+            "Expected Android status bar to be hidden",
+            composeRule.activity.window.decorView.rootWindowInsets.isVisible(Type.statusBars()),
+        )
     }
 
     @Test
@@ -42,6 +72,17 @@ class SynthHdAppTest {
 
         clickTab("Extras")
         composeRule.onNodeWithText("Last saved channel: None").assertIsDisplayed()
+    }
+
+    @Test
+    fun extrasShowsHardwareConnectionControls() {
+        clickTab("Extras")
+
+        composeRule.onNodeWithText("Hardware Control").assertIsDisplayed()
+        composeRule.onNodeWithText("Mode: Offline simulator").assertIsDisplayed()
+        composeRule.onNodeWithText("Scan USB Devices").assertIsDisplayed()
+        composeRule.onNodeWithText("Connect USB Device").assertIsDisplayed()
+        composeRule.onNodeWithText("Disconnect Hardware").assertIsDisplayed()
     }
 
     @Test

@@ -1,12 +1,14 @@
 package com.windfreak.synthhd.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +43,12 @@ fun SynthHdApp(viewModel: SynthHdViewModel) {
     MaterialTheme {
         Scaffold(
             topBar = {
-                Column(Modifier.padding(16.dp)) {
+                Column(
+                    Modifier
+                        .displayCutoutPadding()
+                        .statusBarsPadding()
+                        .padding(16.dp),
+                ) {
                     Text("SynthHD Pro Simulator", style = MaterialTheme.typography.titleLarge)
                     Text(state.status.connectedLabel, style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(8.dp))
@@ -111,7 +118,16 @@ fun SynthHdApp(viewModel: SynthHdViewModel) {
                         viewModel::softwareTrigger,
                     )
                     5 -> StatusScreen(state.status)
-                    6 -> ExtrasScreen(state, viewModel::saveToDevice, viewModel::resetToDefaults)
+                    6 -> ExtrasScreen(
+                        state = state,
+                        hardwareDevices = viewModel.hardwareDevices,
+                        isHardwareConnected = viewModel.isHardwareConnected,
+                        onScanUsb = viewModel::scanUsbDevices,
+                        onConnectUsb = viewModel::connectUsbDevice,
+                        onDisconnectHardware = viewModel::disconnectHardware,
+                        onSave = viewModel::saveToDevice,
+                        onReset = viewModel::resetToDefaults,
+                    )
                 }
             }
         }
