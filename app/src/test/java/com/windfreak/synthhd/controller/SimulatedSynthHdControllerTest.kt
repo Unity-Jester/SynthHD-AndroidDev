@@ -8,6 +8,7 @@ import com.windfreak.synthhd.domain.RunMode
 import com.windfreak.synthhd.domain.SweepDirection
 import com.windfreak.synthhd.domain.SweepState
 import com.windfreak.synthhd.domain.SynthDeviceState
+import com.windfreak.synthhd.domain.TriggerSource
 import com.windfreak.synthhd.domain.TriggerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -155,10 +156,45 @@ class SimulatedSynthHdControllerTest {
     fun softwareTriggerDoesNotCompleteIdleSweep() {
         val controller = SimulatedSynthHdController()
 
-        controller.softwareTrigger()
+        val result = controller.softwareTrigger()
 
+        assertFalse(result.isValid)
         assertEquals(RunMode.Idle, controller.state.sweep.runMode)
         assertEquals(RunMode.Idle, controller.state.trigger.mode)
+    }
+
+    @Test
+    fun softwareTriggerRequiresSoftwareSource() {
+        val controller = SimulatedSynthHdController()
+        controller.setTrigger(TriggerState(source = TriggerSource.External, mode = RunMode.Armed))
+
+        val result = controller.softwareTrigger()
+
+        assertFalse(result.isValid)
+        assertEquals("Select software trigger source before firing.", result.message)
+        assertEquals(RunMode.Armed, controller.state.sweep.runMode)
+    }
+
+    @Test
+    fun constructorResetsTransientRunStateAndRfOutputs() {
+        val controller = SimulatedSynthHdController(
+            SynthDeviceState(
+                channelA = ChannelState(rfEnabled = true),
+                channelB = ChannelState(rfEnabled = true),
+                sweep = SweepState(runMode = RunMode.Running),
+                hopList = listOf(HopPoint(1_000.0, 0.0, 10)),
+                listRunMode = RunMode.Running,
+                trigger = TriggerState(mode = RunMode.Armed),
+            ),
+        )
+
+        val state = controller.state
+        assertFalse(state.channelA.rfEnabled)
+        assertFalse(state.channelB.rfEnabled)
+        assertEquals(RunMode.Idle, state.sweep.runMode)
+        assertEquals(RunMode.Idle, state.listRunMode)
+        assertEquals(RunMode.Idle, state.trigger.mode)
+        assertEquals(1, state.hopList.size)
     }
 
     @Test

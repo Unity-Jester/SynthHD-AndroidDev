@@ -32,7 +32,7 @@ interface SynthHdController {
     fun stopHopList()
     fun setModulation(modulation: ModulationState): ValidationResult
     fun setTrigger(trigger: TriggerState)
-    fun softwareTrigger()
+    fun softwareTrigger(): ValidationResult
     fun saveToDevice()
     fun resetToDefaults()
 }

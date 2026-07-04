@@ -172,12 +172,16 @@ class WindfreakSynthHdController(
         )
     }
 
-    override fun softwareTrigger() {
+    override fun softwareTrigger(): ValidationResult {
+        if (state.trigger.source != TriggerSource.Software) {
+            return ValidationResult(false, "Select software trigger source before firing.")
+        }
         transport.writePacket(WindfreakSynthHdProtocol.startSingleSweep(state.activeChannel))
         state = state.copy(
             sweep = state.sweep.copy(runMode = RunMode.Complete),
             trigger = state.trigger.copy(mode = RunMode.Complete),
         )
+        return ValidationResult(true)
     }
 
     override fun saveToDevice() {

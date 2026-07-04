@@ -14,10 +14,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -37,49 +42,63 @@ fun Section(title: String, content: @Composable () -> Unit) {
     }
 }
 
+/**
+ * Toggles a leading minus sign on numeric draft text. Android numeric keypads
+ * offer no minus key, so signed fields expose this through a +/- button.
+ */
+fun toggleSign(text: String): String =
+    if (text.startsWith("-")) text.removePrefix("-") else "-$text"
+
+@Composable
+private fun SignToggleButton(text: String, onTextChange: (String) -> Unit) {
+    TextButton(onClick = { onTextChange(toggleSign(text)) }) {
+        Text("±")
+    }
+}
+
 @Composable
 fun NumberField(
     label: String,
     value: Double,
     suffix: String,
+    allowNegative: Boolean = false,
     validator: ((Double) -> ValidationResult)? = null,
     onApply: (Double) -> Unit,
 ) {
-    val text = remember(value) { mutableStateOf(value.toString()) }
-    val errorMessage = remember(value) { mutableStateOf<String?>(null) }
+    var text by remember { mutableStateOf(value.toString()) }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(value) {
+        // Sync external changes, but never clobber an edit in progress.
+        if (!focused) text = value.toString()
+    }
+
+    val parsed = text.toDoubleOrNull()
+    val errorMessage = when {
+        parsed == null -> "Enter a valid number"
+        else -> validator?.invoke(parsed)?.takeIf { !it.isValid }?.message
+    }
     Column(Modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = text.value,
-            onValueChange = {
-                text.value = it
-                errorMessage.value = null
-            },
+            value = text,
+            onValueChange = { text = it },
             label = { Text(label) },
             suffix = { Text(suffix) },
-            isError = errorMessage.value != null,
-            supportingText = {
-                errorMessage.value?.let {
-                    Text(it)
-                }
+            leadingIcon = if (allowNegative) {
+                { SignToggleButton(text) { text = it } }
+            } else {
+                null
             },
+            isError = errorMessage != null,
+            supportingText = { errorMessage?.let { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focused = it.isFocused },
         )
         Spacer(Modifier.height(8.dp))
         Button(
-            onClick = {
-                text.value.toDoubleOrNull()?.let {
-                    val result = validator?.invoke(it) ?: ValidationResult(true)
-                    if (result.isValid) {
-                        errorMessage.value = null
-                        onApply(it)
-                    } else {
-                        errorMessage.value = result.message
-                    }
-                } ?: run {
-                    errorMessage.value = "Enter a valid number"
-                }
-            },
+            onClick = { parsed?.let(onApply) },
+            enabled = errorMessage == null,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Apply $label")
@@ -95,41 +114,34 @@ fun IntField(
     validator: ((Int) -> ValidationResult)? = null,
     onApply: (Int) -> Unit,
 ) {
-    val text = remember(value) { mutableStateOf(value.toString()) }
-    val errorMessage = remember(value) { mutableStateOf<String?>(null) }
+    var text by remember { mutableStateOf(value.toString()) }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(value) {
+        if (!focused) text = value.toString()
+    }
+
+    val parsed = text.toIntOrNull()
+    val errorMessage = when {
+        parsed == null -> "Enter a valid whole number"
+        else -> validator?.invoke(parsed)?.takeIf { !it.isValid }?.message
+    }
     Column(Modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = text.value,
-            onValueChange = {
-                text.value = it
-                errorMessage.value = null
-            },
+            value = text,
+            onValueChange = { text = it },
             label = { Text(label) },
             suffix = { Text(suffix) },
-            isError = errorMessage.value != null,
-            supportingText = {
-                errorMessage.value?.let {
-                    Text(it)
-                }
-            },
+            isError = errorMessage != null,
+            supportingText = { errorMessage?.let { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focused = it.isFocused },
         )
         Spacer(Modifier.height(8.dp))
         Button(
-            onClick = {
-                text.value.toIntOrNull()?.let {
-                    val result = validator?.invoke(it) ?: ValidationResult(true)
-                    if (result.isValid) {
-                        errorMessage.value = null
-                        onApply(it)
-                    } else {
-                        errorMessage.value = result.message
-                    }
-                } ?: run {
-                    errorMessage.value = "Enter a valid whole number"
-                }
-            },
+            onClick = { parsed?.let(onApply) },
+            enabled = errorMessage == null,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Apply $label")

@@ -41,7 +41,7 @@ fun GeneratorScreen(
         Section("Generator ${state.activeChannel}") {
             NumberField("Frequency", channel.frequencyMhz, "MHz", validator = ::validateFrequencyMhz, onApply = onFrequency)
             Spacer(Modifier.height(12.dp))
-            NumberField("Power", channel.powerDbm, "dBm", validator = ::validatePowerDbm, onApply = onPower)
+            NumberField("Power", channel.powerDbm, "dBm", allowNegative = true, validator = ::validatePowerDbm, onApply = onPower)
             Spacer(Modifier.height(12.dp))
             NumberField("Phase", channel.phaseDegrees, "deg", validator = ::validatePhaseDegrees, onApply = onPhase)
             Spacer(Modifier.height(12.dp))

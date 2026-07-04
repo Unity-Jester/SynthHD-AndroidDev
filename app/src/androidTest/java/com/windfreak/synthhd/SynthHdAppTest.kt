@@ -159,7 +159,7 @@ class SynthHdAppTest {
             clickText("Add Point")
         }
 
-        composeRule.onNodeWithText("Showing first 20 summaries").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("21. 1020.0 MHz, 0.0 dBm, 10 ms").performScrollTo().assertIsDisplayed()
 
         replaceTextField(3, "21")
         clickText("Select Point")

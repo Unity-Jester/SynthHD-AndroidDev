@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -29,6 +30,7 @@ import com.windfreak.synthhd.domain.validateFrequencyMhz
 import com.windfreak.synthhd.domain.validatePositiveDwellMs
 import com.windfreak.synthhd.domain.validatePowerDbm
 import com.windfreak.synthhd.ui.components.Section
+import com.windfreak.synthhd.ui.components.toggleSign
 
 @Composable
 fun ListScreen(
@@ -85,7 +87,7 @@ fun ListScreen(
                 )
                 Spacer(Modifier.height(12.dp))
             }
-            state.hopList.take(20).forEachIndexed { index, point ->
+            state.hopList.forEachIndexed { index, point ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -95,10 +97,6 @@ fun ListScreen(
                         text = "${index + 1}. ${point.frequencyMhz} MHz, ${point.powerDbm} dBm, ${point.dwellMs} ms",
                     )
                 }
-            }
-            if (state.hopList.size > 20) {
-                Spacer(Modifier.height(8.dp))
-                Text("Showing first 20 summaries")
             }
         }
     }
@@ -176,34 +174,27 @@ private fun PointSelector(
     onSelect: (Int) -> Unit,
 ) {
     val selectedText = remember(selectedIndex, pointCount) { mutableStateOf((selectedIndex + 1).toString()) }
-    val errorText = remember(selectedIndex, pointCount) { mutableStateOf<String?>(null) }
+    val selectedPointNumber = selectedText.value.toIntOrNull()
+    val errorText = when {
+        selectedPointNumber == null -> "Enter a valid whole number"
+        selectedPointNumber !in 1..pointCount -> "Point must be between 1 and $pointCount."
+        else -> null
+    }
 
     OutlinedTextField(
         value = selectedText.value,
-        onValueChange = {
-            selectedText.value = it
-            errorText.value = null
-        },
+        onValueChange = { selectedText.value = it },
         label = { Text("Selected Point") },
         suffix = { Text("1-$pointCount") },
-        isError = errorText.value != null,
-        supportingText = { errorText.value?.let { Text(it) } },
+        isError = errorText != null,
+        supportingText = { errorText?.let { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
     Button(
-        onClick = {
-            val selectedPointNumber = selectedText.value.toIntOrNull()
-            errorText.value = when {
-                selectedPointNumber == null -> "Enter a valid whole number"
-                selectedPointNumber !in 1..pointCount -> "Point must be between 1 and $pointCount."
-                else -> null
-            }
-            if (selectedPointNumber != null && errorText.value == null) {
-                onSelect(selectedPointNumber - 1)
-            }
-        },
+        onClick = { selectedPointNumber?.let { onSelect(it - 1) } },
+        enabled = errorText == null,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text("Select Point")
@@ -223,80 +214,68 @@ private fun HopPointEditor(
     val frequencyText = remember(editorKey, point.frequencyMhz) { mutableStateOf(point.frequencyMhz.toString()) }
     val powerText = remember(editorKey, point.powerDbm) { mutableStateOf(point.powerDbm.toString()) }
     val dwellText = remember(editorKey, point.dwellMs) { mutableStateOf(point.dwellMs.toString()) }
-    val frequencyError = remember(editorKey, point.frequencyMhz) { mutableStateOf<String?>(null) }
-    val powerError = remember(editorKey, point.powerDbm) { mutableStateOf<String?>(null) }
-    val dwellError = remember(editorKey, point.dwellMs) { mutableStateOf<String?>(null) }
+
+    val frequency = frequencyText.value.toDoubleOrNull()
+    val power = powerText.value.toDoubleOrNull()
+    val dwell = dwellText.value.toIntOrNull()
+    val frequencyError = when {
+        frequency == null -> "Enter a valid number"
+        else -> validateFrequencyMhz(frequency).takeIf { !it.isValid }?.message
+    }
+    val powerError = when {
+        power == null -> "Enter a valid number"
+        else -> validatePowerDbm(power).takeIf { !it.isValid }?.message
+    }
+    val dwellError = when {
+        dwell == null -> "Enter a valid whole number"
+        else -> validatePositiveDwellMs(dwell).takeIf { !it.isValid }?.message
+    }
 
     OutlinedTextField(
         value = frequencyText.value,
-        onValueChange = {
-            frequencyText.value = it
-            frequencyError.value = null
-        },
+        onValueChange = { frequencyText.value = it },
         label = { Text(frequencyLabel) },
         suffix = { Text("MHz") },
-        isError = frequencyError.value != null,
-        supportingText = { frequencyError.value?.let { Text(it) } },
+        isError = frequencyError != null,
+        supportingText = { frequencyError?.let { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
     OutlinedTextField(
         value = powerText.value,
-        onValueChange = {
-            powerText.value = it
-            powerError.value = null
-        },
+        onValueChange = { powerText.value = it },
         label = { Text(powerLabel) },
         suffix = { Text("dBm") },
-        isError = powerError.value != null,
-        supportingText = { powerError.value?.let { Text(it) } },
+        leadingIcon = {
+            TextButton(onClick = { powerText.value = toggleSign(powerText.value) }) {
+                Text("±")
+            }
+        },
+        isError = powerError != null,
+        supportingText = { powerError?.let { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
     OutlinedTextField(
         value = dwellText.value,
-        onValueChange = {
-            dwellText.value = it
-            dwellError.value = null
-        },
+        onValueChange = { dwellText.value = it },
         label = { Text(dwellLabel) },
         suffix = { Text("ms") },
-        isError = dwellError.value != null,
-        supportingText = { dwellError.value?.let { Text(it) } },
+        isError = dwellError != null,
+        supportingText = { dwellError?.let { Text(it) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
     Button(
         onClick = {
-            val frequency = frequencyText.value.toDoubleOrNull()
-            val power = powerText.value.toDoubleOrNull()
-            val dwell = dwellText.value.toIntOrNull()
-
-            frequencyError.value = when {
-                frequency == null -> "Enter a valid number"
-                !validateFrequencyMhz(frequency).isValid -> validateFrequencyMhz(frequency).message
-                else -> null
-            }
-            powerError.value = when {
-                power == null -> "Enter a valid number"
-                !validatePowerDbm(power).isValid -> validatePowerDbm(power).message
-                else -> null
-            }
-            dwellError.value = when {
-                dwell == null -> "Enter a valid whole number"
-                !validatePositiveDwellMs(dwell).isValid -> validatePositiveDwellMs(dwell).message
-                else -> null
-            }
-
-            if (frequency != null && power != null && dwell != null &&
-                frequencyError.value == null && powerError.value == null && dwellError.value == null
-            ) {
+            if (frequency != null && power != null && dwell != null) {
                 onSubmit(HopPoint(frequency, power, dwell))
             }
         },
+        enabled = frequencyError == null && powerError == null && dwellError == null,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(actionLabel)

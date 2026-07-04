@@ -10,6 +10,7 @@ import com.windfreak.synthhd.domain.SweepDirection
 import com.windfreak.synthhd.domain.SweepState
 import com.windfreak.synthhd.domain.SynthConstants
 import com.windfreak.synthhd.domain.SynthDeviceState
+import com.windfreak.synthhd.domain.TriggerSource
 import com.windfreak.synthhd.domain.TriggerState
 import com.windfreak.synthhd.domain.ValidationResult
 import com.windfreak.synthhd.domain.validateAmDepthPercent
@@ -145,12 +146,18 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
         )
     }
 
-    override fun softwareTrigger() {
-        if (state.sweep.runMode != RunMode.Armed) return
+    override fun softwareTrigger(): ValidationResult {
+        if (state.trigger.source != TriggerSource.Software) {
+            return ValidationResult(false, "Select software trigger source before firing.")
+        }
+        if (state.sweep.runMode != RunMode.Armed) {
+            return ValidationResult(false, "Arm a triggered sweep before firing.")
+        }
         state = state.copy(
             sweep = state.sweep.copy(runMode = RunMode.Complete),
             trigger = state.trigger.copy(mode = RunMode.Complete),
         )
+        return ValidationResult(true)
     }
 
     override fun saveToDevice() {
@@ -180,12 +187,16 @@ class SimulatedSynthHdController(initialState: SynthDeviceState = SynthDeviceSta
     private fun sanitizeState(state: SynthDeviceState): SynthDeviceState {
         val defaults = SynthDeviceState()
         val hopList = sanitizeHopList(state.hopList)
+        val sweep = if (validateSweep(state.sweep).isValid) state.sweep else defaults.sweep
+        // Run states and RF outputs are transient: every load or restore starts
+        // idle and RF-safe regardless of what was persisted.
         return state.copy(
-            channelA = sanitizeChannel(state.channelA),
-            channelB = sanitizeChannel(state.channelB),
-            sweep = if (validateSweep(state.sweep).isValid) state.sweep else defaults.sweep,
+            channelA = sanitizeChannel(state.channelA).copy(rfEnabled = false),
+            channelB = sanitizeChannel(state.channelB).copy(rfEnabled = false),
+            sweep = sweep.copy(runMode = RunMode.Idle),
             hopList = hopList,
-            listRunMode = if (hopList.isEmpty()) RunMode.Idle else state.listRunMode,
+            listRunMode = RunMode.Idle,
+            trigger = state.trigger.copy(mode = RunMode.Idle),
             modulation = if (validateModulation(state.modulation).isValid) state.modulation else defaults.modulation,
         )
     }

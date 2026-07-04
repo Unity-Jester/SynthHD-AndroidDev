@@ -68,7 +68,14 @@ class SynthHdViewModel(
     fun stopHopList() = applyChange { controller.stopHopList() }
     fun setModulation(modulation: ModulationState) = applyValidation(controller.setModulation(modulation))
     fun setTrigger(trigger: TriggerState) = applyChange { controller.setTrigger(trigger) }
-    fun softwareTrigger() = applyChange { controller.softwareTrigger() }
+    fun softwareTrigger() {
+        val result = controller.softwareTrigger()
+        if (result.isValid) {
+            sync("Software trigger fired")
+        } else {
+            message = result.message
+        }
+    }
     fun saveToDevice() = applyChange(if (isHardwareConnected) "Hardware settings saved" else "Simulated settings saved") {
         controller.saveToDevice()
     }
