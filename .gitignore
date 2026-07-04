@@ -4,3 +4,6 @@
 .gradle-user/
 build/
 app/build/
+.DS_Store
+.idea/
+local.properties
